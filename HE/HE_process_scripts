@@ -1,0 +1,40 @@
+
+
+
+###############
+./HE_process.sh /data2/ben/data/zhongzhong/breast/ cut ndpi
+./HE_process.sh /data2/ben/data/zhongzhong/breast/ color
+
+
+
+
+
+
+./HE_process.sh /data2/ben/data/TCGA/breast/ train TCGA_clinical_data-fromlvyp_v3.csv
+
+
+
+
+
+./HE_process.sh /data2/ben/data/TCGA/breast/ train breast_relapse_test.csv.addsample_type.csv
+
+./HE_process.sh /data2/ben/data/TCGA/breast/ train breast_relapse_test.csv
+
+
+
+./HE_process.sh /data2/ben/data/zhongzhong/breast test zhongzhong_breast_clinical_data_132_samewithTCGA_v3.csv
+
+./HE_process.sh /data2/ben/data/zhongzhong/breast test zhongzhong_breast_clinical_data_132_samewithTCGA_v3.csv.only1_6.csv
+
+##2020 12 20
+./HE_process.sh /data2/ben/data/TCGA/breast/ train TCGA_clinical_data-fromlvyp_v3.csv
+
+######################
+
+
+
+./HE_process.sh /data2/ben/data/xiehe/cesc/ test xiehe.cesc.TMB.class.add_sample_type.csv 
+
+
+
+

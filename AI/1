@@ -1,0 +1,158 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+#from skimage import io, transform
+import glob
+import os
+import numpy as np
+import time
+import xlrd
+from openpyxl import load_workbook
+from openpyxl import Workbook
+from openpyxl.writer.excel import ExcelWriter
+import cv2
+# import xlwt
+import os
+import tensorflow as tf
+
+from keras import losses
+# from tensorflow.keras import layers
+import tensorflow.keras as keras
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import LabelEncoder
+from scipy import interp
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_validate, train_test_split
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+#from sklearn.cross_validation import StratifiedKFold
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import recall_score,accuracy_score
+from sklearn.metrics import precision_score,f1_score
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
+from sklearn.model_selection import cross_val_predict
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.pyplot as plt
+from keras.utils.np_utils import to_categorical
+###
+#import tensorflow.keras as keras
+import matplotlib.pyplot as plt
+from keras import regularizers
+#from keras.layers import *
+
+from tensorflow.keras.layers import Conv2D,Dense,Dropout,Activation,BatchNormalization,MaxPooling2D,Flatten
+from keras.models import Sequential
+from keras import regularizers
+from keras.regularizers import l1,l2
+###
+import tensorflow.keras.backend as K
+# tf.disable_v2_behavior()
+#from keras import backend as K
+
+def LeNet(image_sizes_list,classes,parameters_list,activation_function, init_mode):
+    width = image_sizes_list[0]
+    height = image_sizes_list[1]
+    channel = image_sizes_list[2]
+    #model = Sequential()
+    model = keras.models.Sequential()
+    model.add(tf.keras.layers.Conv2D(32,(5,5),strides=(1,1),input_shape=(width,height,channel),padding='valid',activation='relu',kernel_initializer=init_mode))  ### 'uniform'
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Conv2D(64,(5,5),strides=(1,1),padding='valid',activation='relu',kernel_initializer='uniform'))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(100,activation='relu'))
+    model.add(keras.layers.Dense(classes,activation='softmax'))
+    return model
+
+def CNN3(image_sizes_list,classes,parameters_list,activation_function, init_mode):
+    width = image_sizes_list[0]
+    height = image_sizes_list[1]
+    channel = image_sizes_list[2]
+
+    model = keras.models.Sequential()
+    model.add(tf.keras.layers.Conv2D(8, (5, 5), activation='relu', input_shape=(width,height,channel)))
+    for i in range(3):
+        model.add(keras.layers.MaxPooling2D((2, 2)))
+        model.add(keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001, center=True, scale=True, beta_initializer='zeros', gamma_initializer='ones', moving_mean_initializer='zeros', moving_variance_initializer='ones', beta_regularizer=None, gamma_regularizer=None, beta_constraint=None, gamma_constraint=None)) ##benben
+        model.add(keras.layers.Conv2D(8, (3, 3), activation='relu'))
+    # model.add(keras.layers.MaxPooling2D((2, 2)))
+    # model.add(keras.layers.Conv2D(8, (3, 3), activation='relu'))
+
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(units=classes, activation='softmax',kernel_regularizer=regularizers.l2(0.001),activity_regularizer=regularizers.l1(0.01)))
+    print(model.summary())
+    return model
+
+#def AlexNet(width,height,depth,classes,reg=0.0002):
+def AlexNet(image_sizes_list,classes,parameters_list,activation_function, init_mode):
+    reg=parameters_list["reg"]        
+    print("reg:", reg)
+    print("parameters_list:",parameters_list)
+    width = 120
+    height = 120
+    channel = 3
+    inputShape = (width,height,channel)
+    model = keras.models.Sequential()
+    chanDim = -1
+
+    #if K.image_data_format() == "channels_first":
+    #        inputShape = (depth,height,width)
+    #        chanDim = 1
+    model.add(tf.keras.layers.Conv2D(96,(11,11),strides=(4,4),input_shape=inputShape,padding="same",kernel_regularizer=l2(reg)))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(256,(5,5),padding="same",kernel_regularizer=l2(reg)))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(384,(3,3),padding="same",kernel_regularizer=l2(reg)))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+
+    model.add(Conv2D(384,(3,3),padding="same",kernel_regularizer=l2(reg)))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+
+    model.add(Conv2D(256,(3,3),padding="same",kernel_regularizer=l2(reg)))
+    model.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(4096,kernel_regularizer=l2(reg)))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
+
+    model.add(Dense(4096,kernel_regularizer=l2(reg)))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
+    model.add(Dense(int(classes),kernel_regularizer=l2(reg)))
+    model.add(Activation("softmax"))
+    return model
+
+
+def AlexNet1(image_sizes_list,classes,parameters_list,activation_function, init_mode):
+    reg=0.0001        
+    width = image_sizes_list[0]
+    height = image_sizes_list[1]
+    channel = image_sizes_list[2]
+    inputShape = (width,height,channel)
+    model = keras.models.Sequential()
+    model.add(tf.keras.layers.Conv2D(96,(11,11),strides=(4,4),input_shape=inputShape,padding='valid',activation='relu',kernel_initializer='uniform'))
+    model.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+    model.add(Conv2D(256,(5,5),strides=(1,1),padding='same',activation='relu',kernel_initializer='uniform'))
+    model.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+    model.add(Conv2D(384,(3,3),strides=(1,1),padding='same',activation='relu',kernel_initializer='uniform'))
+    model.add(Conv2D(384,(3,3),strides=(1,1),padding='same',activation='relu',kernel_initializer='uniform'))
+    model.add(Conv2D(256,(3,3),strides=(1,1),padding='same',activation='relu',kernel_initializer='uniform'))
+    model.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+    model.add(Flatten())
+    model.add(Dense(4096,activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(4096,activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(classes,activation='softmax'))
+    return model
